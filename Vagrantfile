@@ -261,14 +261,14 @@ Vagrant.configure(2) do |config|
         end
     end
     if ENV["NFS"] then
-        config.vm.synced_folder '.', '/home/vagrant/go/src/github.com/cilium/cilium', type: "nfs", nfs_udp: false
+        config.vm.synced_folder '..', '/home/vagrant/go/src/github.com/cilium', type: "nfs", nfs_udp: false
         # Don't forget to enable this ports on your host before starting the VM
         # in order to have nfs working
         # iptables -I INPUT -p tcp -s 192.168.34.0/24 --dport 111 -j ACCEPT
         # iptables -I INPUT -p tcp -s 192.168.34.0/24 --dport 2049 -j ACCEPT
         # iptables -I INPUT -p tcp -s 192.168.34.0/24 --dport 20048 -j ACCEPT
     else
-        config.vm.synced_folder '.', '/home/vagrant/go/src/github.com/cilium/cilium'
+        config.vm.synced_folder '..', '/home/vagrant/go/src/github.com/cilium'
     end
 
     if ENV['USER_MOUNTS'] then
