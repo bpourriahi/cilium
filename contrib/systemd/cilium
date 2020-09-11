@@ -22,8 +22,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin:/bin
 # Note: A key-value store is require for cilium to function.
 # Check more cli options using cilium-agent -h
 
-CILIUM_OPTS=--kvstore consul --kvstore-opt consul.address=127.0.0.1:8500
-CILIUM_OPERATOR_OPTS=--kvstore consul --kvstore-opt consul.address=127.0.0.1:8500 --k8s-kubeconfig-path=/home/vagrant/.kube/config
+CILIUM_OPTS=--kvstore etcd --kvstore-opt etcd.address=192.168.36.11:32379 -t vxlan
+CILIUM_OPERATOR_OPTS=--kvstore etcd --kvstore-opt etcd.address=192.168.36.11:32379 --k8s-kubeconfig-path=/home/vagrant/.kube/config
 
 HOME=/home/vagrant
 
