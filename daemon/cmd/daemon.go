@@ -519,7 +519,7 @@ func NewDaemon(ctx context.Context, epMgr *endpointmanager.EndpointManager, dp d
 	// restore endpoints before any IPs are allocated to avoid eventual IP
 	// conflicts later on, otherwise any IP conflict will result in the
 	// endpoint not being able to be restored.
-	restoredEndpoints, err := d.restoreOldEndpoints(option.Config.StateDir, true)
+	restoredEndpoints, err := d.restoreOldEndpoints(epMgr, option.Config.StateDir, true)
 	if err != nil {
 		log.WithError(err).Error("Unable to restore existing endpoints")
 	}

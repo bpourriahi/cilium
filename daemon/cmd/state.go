@@ -25,6 +25,7 @@ import (
 	"github.com/cilium/cilium/pkg/controller"
 	"github.com/cilium/cilium/pkg/datapath/connector"
 	"github.com/cilium/cilium/pkg/endpoint"
+	"github.com/cilium/cilium/pkg/endpointmanager"
 	"github.com/cilium/cilium/pkg/k8s"
 	"github.com/cilium/cilium/pkg/k8s/watchers"
 	"github.com/cilium/cilium/pkg/labels"
@@ -99,7 +100,7 @@ func (d *Daemon) validateEndpoint(ep *endpoint.Endpoint) (valid bool, err error)
 //
 // If clean is true, endpoints which cannot be associated with a container
 // workloads are deleted.
-func (d *Daemon) restoreOldEndpoints(dir string, clean bool) (*endpointRestoreState, error) {
+func (d *Daemon) restoreOldEndpoints(epMgr endpointmanager.EndpointResourceSynchronizer, dir string, clean bool) (*endpointRestoreState, error) {
 	failed := 0
 	state := &endpointRestoreState{
 		restored: []*endpoint.Endpoint{},
@@ -159,6 +160,7 @@ func (d *Daemon) restoreOldEndpoints(dir string, clean bool) (*endpointRestoreSt
 		if err != nil {
 			// Disconnected EPs are not failures, clean them silently below
 			if !ep.IsDisconnecting() {
+				epMgr.DeleteK8sCiliumEndpointSync(ep)
 				scopedLog.WithError(err).Warningf("Unable to restore endpoint, ignoring")
 				failed++
 			}
