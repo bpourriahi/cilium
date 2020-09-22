@@ -49,7 +49,9 @@ import (
 	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
 	"github.com/cilium/cilium/pkg/ipcache"
 	"github.com/cilium/cilium/pkg/k8s"
+	k8sConst "github.com/cilium/cilium/pkg/k8s/apis/cilium.io"
 	"github.com/cilium/cilium/pkg/k8s/watchers"
+	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/lock"
 	"github.com/cilium/cilium/pkg/logging"
 	"github.com/cilium/cilium/pkg/logging/logfields"
@@ -430,6 +432,12 @@ func NewDaemon(ctx context.Context, epMgr *endpointmanager.EndpointManager, dp d
 		}
 
 		bootstrapStats.k8sInit.End(true)
+	} else {
+		agentLabels := labels.NewLabelsFromModel(option.Config.AgentLabels).K8sStringMap()
+		agentLabels[k8sConst.PodNamespaceLabel] = option.Config.K8sNamespace
+		agentLabels[k8sConst.PodNameLabel] = nodeTypes.GetName()
+		// Set configured agent labels to to local node when not running k8s
+		node.SetLabels(agentLabels)
 	}
 
 	// The kube-proxy replacement and host-fw devices detection should happen after

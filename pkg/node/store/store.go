@@ -32,6 +32,14 @@ var (
 	// break backwards compatibility
 	NodeStorePrefix = path.Join(kvstore.BaseKeyPrefix, "state", "nodes", "v1")
 
+	// NodeRegisterStorePrefix is the kvstore prefix of the shared
+	// store for node registration that will be followed by k8s
+	// namespace name depending on agent's --k8s-namespace option
+	//
+	// WARNING - STABLE API: Changing the structure or values of this will
+	// break backwards compatibility
+	NodeRegisterStorePrefix = path.Join(kvstore.BaseKeyPrefix, "state", "noderegister", "v1")
+
 	// KeyCreator creates a node for a shared store
 	KeyCreator = func() store.Key {
 		n := nodeTypes.Node{}
@@ -67,11 +75,6 @@ func (o *NodeObserver) OnDelete(k store.NamedKey) {
 	}
 }
 
-// NodeRegistrar is a wrapper around store.SharedStore.
-type NodeRegistrar struct {
-	*store.SharedStore
-}
-
 // NodeManager is the interface that the manager of nodes has to implement
 type NodeManager interface {
 	// NodeUpdated is called when the store detects a change in node
@@ -85,10 +88,26 @@ type NodeManager interface {
 	Exists(id nodeTypes.Identity) bool
 }
 
+// NodeRegistrar is a wrapper around store.SharedStore.
+type NodeRegistrar struct {
+	*store.SharedStore
+
+	registerStore *store.SharedStore
+}
+
 // RegisterNode registers the local node in the cluster
 func (nr *NodeRegistrar) RegisterNode(n *nodeTypes.Node, manager NodeManager) error {
 	if option.Config.KVStore == "" {
 		return nil
+	}
+
+	// Join the shared store for node registrations
+	registerStore, err := store.JoinSharedStore(store.Configuration{
+		Prefix:     NodeRegisterStorePrefix,
+		KeyCreator: KeyCreator,
+	})
+	if err != nil {
+		return err
 	}
 
 	// Join the shared store holding node information of entire cluster
@@ -99,15 +118,21 @@ func (nr *NodeRegistrar) RegisterNode(n *nodeTypes.Node, manager NodeManager) er
 	})
 
 	if err != nil {
+		registerStore.Release()
 		return err
 	}
 
-	if err = store.UpdateLocalKeySync(context.TODO(), n); err != nil {
-		store.Release()
-		return err
-	}
-
+	nr.registerStore = registerStore
 	nr.SharedStore = store
+
+	err = nr.UpdateLocalKeySync(n)
+	if err != nil {
+		registerStore.Release()
+		nr.registerStore = nil
+		store.Release()
+		nr.SharedStore = nil
+		return err
+	}
 
 	return nil
 }
@@ -115,5 +140,8 @@ func (nr *NodeRegistrar) RegisterNode(n *nodeTypes.Node, manager NodeManager) er
 // UpdateLocalKeySync synchronizes the local key for the node using the
 // SharedStore.
 func (nr *NodeRegistrar) UpdateLocalKeySync(n *nodeTypes.Node) error {
+	if nr.registerStore != nil {
+		return nr.registerStore.UpdateLocalKeySync(context.TODO(), n)
+	}
 	return nr.SharedStore.UpdateLocalKeySync(context.TODO(), n)
 }
