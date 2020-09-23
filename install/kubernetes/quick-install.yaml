@@ -629,7 +629,7 @@ spec:
               key: AWS_DEFAULT_REGION
               name: cilium-aws
               optional: true
-        image: "docker.io/cilium/operator-generic:v1.8.3"
+        image: "docker.io/cilium/operator-generic:testing"
         imagePullPolicy: IfNotPresent
         name: cilium-operator
         livenessProbe:
