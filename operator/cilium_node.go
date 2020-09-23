@@ -31,7 +31,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-var k8sCiliumNodesCacheSynced = make(chan struct{})
+var (
+	// CiliumNodeStore contains all CiliumNodes present in k8s.
+	// Warning: The CiliumNodes stored in the cache are not intended to be
+	// used for Update operations in k8s as some of its fields were are not
+	// populated.
+	CiliumNodeStore cache.Store
+
+	k8sCiliumNodesCacheSynced = make(chan struct{})
+)
 
 // startSynchronizingCiliumNodes waits for the CiliumNode CRD availability and
 // then synchronizes CiliumNode resources.
@@ -41,7 +49,8 @@ func startSynchronizingCiliumNodes(apiextensionsK8sClient apiextensionsclientset
 	// TODO: The operator is currently storing a full copy of the
 	// CiliumNode resource, as the resource grows, we may want to consider
 	// introducing a slim version of it.
-	_, ciliumNodeInformer := informer.NewInformer(
+	var ciliumNodeInformer cache.Controller
+	CiliumNodeStore, ciliumNodeInformer = informer.NewInformer(
 		cache.NewListWatchFromClient(ciliumK8sClient.CiliumV2().RESTClient(),
 			v2.CNPluralName, v1.NamespaceAll, fields.Everything()),
 		&v2.CiliumNode{},

@@ -50,6 +50,7 @@ func enableCiliumEndpointSyncGC() {
 	// This functions will block until the resources are synced with k8s.
 	watchers.CiliumEndpointsInit(ciliumClient)
 	watchers.PodsInit(k8s.WatcherCli())
+	<-k8sCiliumNodesCacheSynced
 
 	// this dummy manager is needed only to add this controller to the global list
 	controller.NewManager().UpdateController(controllerName,
@@ -66,10 +67,35 @@ func enableCiliumEndpointSyncGC() {
 					}
 
 					cepFullName := cep.Namespace + "/" + cep.Name
-					_, exists, err := watchers.PodStore.GetByKey(cepFullName)
-					if err != nil {
-						scopedLog.WithError(err).Warn("Unable to get pod from store")
-						continue
+					var err error
+					exists := false
+					podChecked := false
+					for _, owner := range cep.ObjectMeta.OwnerReferences {
+						switch owner.Kind {
+						case "Pod":
+							_, exists, err = watchers.PodStore.GetByKey(cepFullName)
+							if err != nil {
+								scopedLog.WithError(err).Warn("Unable to get pod from store")
+							}
+							podChecked = true
+						case "CiliumNode":
+							_, exists, err = CiliumNodeStore.GetByKey(owner.Name)
+							if err != nil {
+								scopedLog.WithError(err).Warn("Unable to get CiliumNode from store")
+							}
+						}
+						// Stop looking when an existing owner has been found
+						if exists {
+							break
+						}
+					}
+					if !exists && !podChecked {
+						// Check for a Pod in case none of the owners existed
+						// This keeps the old behavior even if OwnerReferences are missing
+						_, exists, err = watchers.PodStore.GetByKey(cepFullName)
+						if err != nil {
+							scopedLog.WithError(err).Warn("Unable to get pod from store")
+						}
 					}
 					if !exists {
 						// FIXME: this is fragile as we might have received the
