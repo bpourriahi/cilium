@@ -436,6 +436,7 @@ func NewDaemon(ctx context.Context, epMgr *endpointmanager.EndpointManager, dp d
 		agentLabels := labels.NewLabelsFromModel(option.Config.AgentLabels).K8sStringMap()
 		agentLabels[k8sConst.PodNamespaceLabel] = option.Config.K8sNamespace
 		agentLabels[k8sConst.PodNameLabel] = nodeTypes.GetName()
+		agentLabels[k8sConst.PolicyLabelCluster] = option.Config.ClusterName
 		// Set configured agent labels to to local node when not running k8s
 		node.SetLabels(agentLabels)
 	}

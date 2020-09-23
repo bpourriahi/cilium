@@ -122,17 +122,25 @@ func (nr *NodeRegistrar) RegisterNode(n *nodeTypes.Node, manager NodeManager) er
 		return err
 	}
 
-	nr.registerStore = registerStore
-	nr.SharedStore = store
+	if registerStore != nil {
+		err = registerStore.UpdateLocalKeySync(context.TODO(), n)
+		if err == nil {
+			// Wait until node identity can has been allocated by the KV store
+		}
+	} else {
+		err = store.UpdateLocalKeySync(context.TODO(), n)
+	}
 
-	err = nr.UpdateLocalKeySync(n)
 	if err != nil {
-		registerStore.Release()
-		nr.registerStore = nil
+		if registerStore != nil {
+			registerStore.Release()
+		}
 		store.Release()
-		nr.SharedStore = nil
 		return err
 	}
+
+	nr.registerStore = registerStore
+	nr.SharedStore = store
 
 	return nil
 }
