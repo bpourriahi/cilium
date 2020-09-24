@@ -47,7 +47,6 @@ type options struct {
 	insecureServer    bool
 	clientTLSConfig   *tls.Config
 	insecureClient    bool
-	debug             bool
 	observerOptions   []observer.Option
 }
 
@@ -96,14 +95,6 @@ func WithRetryTimeout(t time.Duration) Option {
 func WithListenAddress(a string) Option {
 	return func(o *options) error {
 		o.listenAddress = a
-		return nil
-	}
-}
-
-// WithDebug enables debug mode.
-func WithDebug() Option {
-	return func(o *options) error {
-		o.debug = true
 		return nil
 	}
 }

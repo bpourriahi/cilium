@@ -24,8 +24,6 @@ import (
 	peerTypes "github.com/cilium/cilium/pkg/hubble/peer/types"
 	"github.com/cilium/cilium/pkg/hubble/relay/observer"
 	"github.com/cilium/cilium/pkg/hubble/relay/pool"
-	"github.com/cilium/cilium/pkg/logging"
-	"github.com/cilium/cilium/pkg/logging/logfields"
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -55,7 +53,7 @@ type Server struct {
 }
 
 // New creates a new Server.
-func New(options ...Option) (*Server, error) {
+func New(log logrus.FieldLogger, options ...Option) (*Server, error) {
 	opts := defaultOptions
 	for _, opt := range options {
 		if err := opt(&opts); err != nil {
@@ -68,8 +66,6 @@ func New(options ...Option) (*Server, error) {
 	if opts.serverCredentials == nil && !opts.insecureServer {
 		return nil, ErrNoTransportCredentials
 	}
-	logger := logging.DefaultLogger.WithField(logfields.LogSubsys, "hubble-relay")
-	logging.ConfigureLogLevel(opts.debug)
 
 	pm, err := pool.NewPeerManager(
 		pool.WithPeerServiceAddress(opts.hubbleTarget),
@@ -84,14 +80,14 @@ func New(options ...Option) (*Server, error) {
 			TLSConfig:   opts.clientTLSConfig,
 		}),
 		pool.WithRetryTimeout(opts.retryTimeout),
-		pool.WithLogger(logger),
+		pool.WithLogger(log),
 	)
 	if err != nil {
 		return nil, err
 	}
 	return &Server{
 		pm:   pm,
-		log:  logger,
+		log:  log,
 		stop: make(chan struct{}),
 		opts: opts,
 	}, nil

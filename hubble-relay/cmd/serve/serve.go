@@ -25,6 +25,8 @@ import (
 
 	"github.com/cilium/cilium/pkg/hubble/relay/defaults"
 	"github.com/cilium/cilium/pkg/hubble/relay/server"
+	"github.com/cilium/cilium/pkg/logging"
+	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/pprof"
 
 	"github.com/google/gops/agent"
@@ -133,6 +135,11 @@ func New(vp *viper.Viper) *cobra.Command {
 }
 
 func runServe(vp *viper.Viper) error {
+	logger := logging.DefaultLogger.WithField(logfields.LogSubsys, "hubble-relay")
+	if vp.GetBool("debug") {
+		logging.ConfigureLogLevel(true)
+	}
+
 	opts := []server.Option{
 		server.WithDialTimeout(vp.GetDuration(keyDialTimeout)),
 		server.WithHubbleTarget(vp.GetString(keyPeerService)),
@@ -153,9 +160,6 @@ func runServe(vp *viper.Viper) error {
 	}
 	opts = append(opts, serverTLSOption)
 
-	if vp.GetBool("debug") {
-		opts = append(opts, server.WithDebug())
-	}
 	if vp.GetBool(keyPprof) {
 		pprof.Enable()
 	}
@@ -165,7 +169,7 @@ func runServe(vp *viper.Viper) error {
 			return fmt.Errorf("failed to start gops agent: %v", err)
 		}
 	}
-	srv, err := server.New(opts...)
+	srv, err := server.New(logger, opts...)
 	if err != nil {
 		return fmt.Errorf("cannot create hubble-relay server: %v", err)
 	}
