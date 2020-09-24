@@ -84,7 +84,7 @@ func (d *Daemon) initHealth() {
 
 					client, launchErr = health.LaunchAsEndpoint(ctx,
 						d,
-						&d.nodeDiscovery.LocalNode,
+						&d.nodeDiscovery.LocalNode.Node,
 						d.mtuConfig,
 						d.endpointManager,
 						d.l7Proxy,

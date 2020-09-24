@@ -173,6 +173,16 @@ type Node struct {
 	Labels map[string]string
 }
 
+// RegisterNode is the Node type used for node registration
+//
+// +k8s:deepcopy-gen=true
+type RegisterNode struct {
+	Node
+
+	// NodeIdentity is the numeric identity allocated for the node.
+	NodeIdentity uint32
+}
+
 // Fullname returns the node's full name including the cluster name if a
 // cluster name value other than the default value has been specified
 func (n *Node) Fullname() string {
@@ -395,6 +405,11 @@ func (n *Node) DeepKeyCopy() store.LocalKey {
 	return n.DeepCopy()
 }
 
+// DeepKeyCopy creates a deep copy of the LocalKey
+func (n *RegisterNode) DeepKeyCopy() store.LocalKey {
+	return n.DeepCopy()
+}
+
 // Marshal returns the node object as JSON byte slice
 func (n *Node) Marshal() ([]byte, error) {
 	return json.Marshal(n)
@@ -403,6 +418,23 @@ func (n *Node) Marshal() ([]byte, error) {
 // Unmarshal parses the JSON byte slice and updates the node receiver
 func (n *Node) Unmarshal(data []byte) error {
 	newNode := Node{}
+	if err := json.Unmarshal(data, &newNode); err != nil {
+		return err
+	}
+
+	*n = newNode
+
+	return nil
+}
+
+// Marshal returns the node object as JSON byte slice
+func (n *RegisterNode) Marshal() ([]byte, error) {
+	return json.Marshal(n)
+}
+
+// Unmarshal parses the JSON byte slice and updates the node receiver
+func (n *RegisterNode) Unmarshal(data []byte) error {
+	newNode := RegisterNode{}
 	if err := json.Unmarshal(data, &newNode); err != nil {
 		return err
 	}
