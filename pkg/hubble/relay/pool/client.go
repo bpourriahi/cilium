@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"time"
 
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 	poolTypes "github.com/cilium/cilium/pkg/hubble/relay/pool/types"
 
 	"google.golang.org/grpc"
@@ -37,7 +38,7 @@ type GRPCClientConnBuilder struct {
 	// TLSConfig is used to build transport credentials for the connection.
 	// If not provided, grpc.WithInsecure() is added to Options before creating
 	// a new ClientConn.
-	TLSConfig *tls.Config
+	TLSConfig certloader.ClientConfig
 }
 
 // ClientConn implements ClientConnBuilder.ClientConn.
@@ -47,12 +48,13 @@ func (b GRPCClientConnBuilder) ClientConn(target, hostname string) (poolTypes.Cl
 	opts := make([]grpc.DialOption, len(b.Options))
 	copy(opts, b.Options)
 
-	switch b.TLSConfig {
-	case nil:
+	if b.TLSConfig == nil {
 		opts = append(opts, grpc.WithInsecure())
-	default:
-		tlsConfig := b.TLSConfig.Clone()
-		tlsConfig.ServerName = hostname
+	} else {
+		tlsConfig := b.TLSConfig.ClientConfig(&tls.Config{
+			ServerName: hostname,
+			MinVersion: tls.VersionTLS13,
+		})
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	}
 	return grpc.DialContext(ctx, target, opts...)

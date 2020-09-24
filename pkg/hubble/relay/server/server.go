@@ -15,6 +15,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -27,6 +28,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
@@ -63,7 +65,7 @@ func New(log logrus.FieldLogger, options ...Option) (*Server, error) {
 	if opts.clientTLSConfig == nil && !opts.insecureClient {
 		return nil, ErrNoClientTLSConfig
 	}
-	if opts.serverCredentials == nil && !opts.insecureServer {
+	if opts.serverTLSConfig == nil && !opts.insecureServer {
 		return nil, ErrNoTransportCredentials
 	}
 
@@ -102,8 +104,12 @@ func (s *Server) Serve() error {
 	switch {
 	case s.opts.insecureServer:
 		s.server = grpc.NewServer()
-	case s.opts.serverCredentials != nil:
-		s.server = grpc.NewServer(grpc.Creds(s.opts.serverCredentials))
+	case s.opts.serverTLSConfig != nil:
+		tlsConfig := s.opts.serverTLSConfig.ServerConfig(&tls.Config{
+			MinVersion: tls.VersionTLS13,
+		})
+		creds := credentials.NewTLS(tlsConfig)
+		s.server = grpc.NewServer(grpc.Creds(creds))
 	default:
 		return ErrNoTransportCredentials
 	}
